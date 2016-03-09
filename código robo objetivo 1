@@ -1,0 +1,115 @@
+import sys
+import os
+import time
+import signal
+import threading
+import socket
+import codecs
+import serial
+from os import system
+
+ser  = None
+
+def connect_to_serial():
+    global ser
+    # connect to serial port
+    possible_ports = ['/dev/ttyUSB0','/dev/ttyUSB1']
+    ser = serial.Serial()
+    ser.baudrate = 115200
+    ser.parity   = 'N'
+    ser.rtscts   = False
+    #ser.xonxoff  = options.xonxoff
+    ser.timeout  = 1     # required so that the reader thread can exit
+    for p in possible_ports:
+        ser.port = p
+        try:
+            ser.open()
+            print "Connected on port: " + p
+            return ser
+        except:
+            time.sleep(1)
+
+def read():
+    n = ser.inWaiting()
+    data = ser.read(n)
+    return data
+
+
+
+
+
+
+def main():
+
+    print("Starting connection to Neato on ports")
+
+    ser = connect_to_serial()
+
+
+
+    ser.write("TestMode On\n")
+    time.sleep(2)
+    data = read()
+    print(data)
+
+    ser.write("GetDigitalSensors\n")
+    time.sleep(1)
+    data = read()
+
+    partes = data.split("\n")
+   
+    print(data)
+
+ 
+    ser.write("GetAnalogSensors\n")
+           
+    time.sleep(0.1)
+    data = read()
+    print(data)
+
+    left = 0
+    right = 0
+    leftdist = 0
+    rightdist = 0
+    dist = 0
+    walldist =90
+
+
+    while leftdist<1 or rightdist<1:
+        ser.write("GetAnalogSensors\n")
+               
+        time.sleep(0.1)
+        data = read()
+        
+        partes = data.split("\n")
+        
+        wall = partes[3].split(",")
+        walldist = float(wall[1])      
+
+        left = partes[6].split(",")
+        leftdist = float(left[1])
+
+        right = partes[7].split(",")
+        rightdist = float(right[1])
+
+        print(walldist)
+        print(rightdist)
+        print(leftdist)
+
+
+        if walldist >50:
+            
+            time.sleep(0.2)
+            ser.write("SetMotor 130 130 150\n")
+        else:
+            time.sleep(0.5)
+            ser.write("SetMotor -130 130 150\n")
+        
+
+   
+   
+    ser.close()
+
+
+if __name__ == "__main__":
+    main()
